@@ -1,0 +1,2945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI 走查工具</title>
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f5f7;
+  --bg-white: #ffffff;
+  --bg-sidebar: #1d1d1f;
+  --text: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-light: #aeaeb2;
+  --border: #e5e5ea;
+  --border-focus: #0071e3;
+  --primary: #0071e3;
+  --primary-hover: #0077ed;
+  --danger: #ff3b30;
+  --warning: #ff9500;
+  --success: #34c759;
+  --info: #5ac8fa;
+  --critical-bg: #fff2f1;
+  --serious-bg: #fff8f0;
+  --normal-bg: #fffbf0;
+  --suggestion-bg: #f0f8ff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 0.2s ease;
+  --sidebar-width: 260px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#app {
+  display: flex;
+  height: 100vh;
+}
+.hidden { display: none !important; }
+#sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  color: #f5f5f7;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+.sidebar-header .btn-primary {
+  width: 100%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.sidebar-header .btn-primary:hover { background: var(--primary-hover); }
+.project-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.project-item {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition);
+  margin-bottom: 2px;
+}
+.project-item:hover { background: rgba(255,255,255,0.08); }
+.project-item.active { background: rgba(255,255,255,0.15); }
+.project-item .project-name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-item .project-date {
+  font-size: 11px;
+  color: var(--text-light);
+}
+#main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.empty-icon { font-size: 64px; margin-bottom: 16px; }
+.empty-state h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { margin-bottom: 24px; }
+#top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.top-bar-left { display: flex; align-items: center; gap: 12px; }
+.top-bar-right { display: flex; align-items: center; gap: 4px; }
+.project-name-input {
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 200px;
+  letter-spacing: -0.3px;
+}
+.project-name-input:focus { background: var(--bg); outline: none; }
+.project-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-ghost:hover { background: var(--bg); }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-white);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-sm:hover { background: var(--bg); }
+.btn-sm.btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+.btn-lg { padding: 10px 24px; font-size: 15px; }
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.btn-close:hover { background: var(--bg); }
+.dropdown { position: relative; }
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 160px;
+  z-index: 100;
+  padding: 4px;
+}
+.dropdown:hover .dropdown-menu { display: block; }
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.dropdown-menu button:hover { background: var(--bg); }
+.page-tabs {
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+.tabs-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tabs-container {
+  display: flex;
+  gap: 2px;
+  min-height: 40px;
+  align-items: flex-end;
+}
+.tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab:hover { color: var(--text); background: var(--bg); border-radius: 6px 6px 0 0; }
+.tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 500;
+}
+.tab .tab-close {
+  opacity: 0;
+  font-size: 14px;
+  padding: 2px;
+  border-radius: 3px;
+  transition: all var(--transition);
+}
+.tab:hover .tab-close { opacity: 0.5; }
+.tab .tab-close:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+.tab-add {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-light);
+  transition: color var(--transition);
+  flex-shrink: 0;
+}
+.tab-add:hover { color: var(--primary); }
+.content-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.canvas-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-white);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tool-separator {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all var(--transition);
+  min-width: 44px;
+}
+.tool-btn:hover { background: var(--bg); }
+.tool-btn.active { background: #e8f0fe; color: var(--primary); }
+.tool-btn span { font-size: 18px; }
+.tool-btn small { font-size: 10px; color: var(--text-secondary); }
+.tool-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+.color-input {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+}
+.select-small {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-white);
+  cursor: pointer;
+}
+.range-slider {
+  width: 80px;
+  cursor: pointer;
+}
+.range-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: center;
+}
+.canvas-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background: #e8e8ed;
+  background-image: 
+    linear-gradient(45deg, #d4d4d8 25%, transparent 25%),
+    linear-gradient(-45deg, #d4d4d8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d4d4d8 75%),
+    linear-gradient(-45deg, transparent 75%, #d4d4d8 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  min-height: 0;
+}
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.canvas-wrapper canvas {
+  display: block;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  background: #fff;
+  margin: 0 auto;
+}
+#annotation-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.img-actions {
+  position: absolute;
+  top: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.95);
+  padding: 5px 10px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
+}
+#img-actions-design { left: 12px; }
+#img-actions-actual { right: 12px; }
+.img-actions-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.img-action-btn {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--bg);
+  color: var(--text);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.img-action-btn:hover { background: var(--border); }
+.img-action-btn.btn-danger:hover { background: var(--danger); color: white; }
+.img-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.side-view {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  justify-content: center;
+}
+.side-panel {
+  flex: 1;
+  max-width: 50%;
+}
+.side-panel h4 {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.side-panel canvas {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  justify-content: center;
+  align-items: stretch;
+  flex: 1;
+  flex-shrink: 0;
+}
+.upload-area:not(:first-child) {
+  flex: 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg-white);
+}
+.upload-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-white);
+  border: none;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  width: 100%;
+  text-align: left;
+}
+.upload-toggle:hover {
+  background: #f5f5f7;
+  color: var(--text);
+}
+.upload-toggle span {
+  transition: transform 0.2s;
+  font-size: 10px;
+}
+.upload-toggle.collapsed span {
+  transform: rotate(-90deg);
+}
+.upload-zones {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+  overflow: hidden;
+  max-height: 300px;
+}
+.upload-zones.collapsed {
+  max-height: 0;
+  padding: 0 16px;
+  opacity: 0;
+}
+.upload-area:not(:first-child) .upload-zone {
+  width: 180px;
+  height: 120px;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--primary);
+  background: #f0f7ff;
+}
+.upload-icon { font-size: 40px; margin-bottom: 8px; }
+.upload-zone p { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.upload-zone small { font-size: 12px; color: var(--text-light); }
+.upload-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+.right-panel {
+  width: 360px;
+  background: var(--bg-white);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+.panel-tab:hover { color: var(--text); }
+.panel-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+.panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.issues-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.issue-card {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  border-left: 3px solid;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+}
+.issue-card:hover { box-shadow: var(--shadow); }
+.issue-card.critical { border-color: #ff3b30; background: var(--critical-bg); }
+.issue-card.serious { border-color: #ff9500; background: var(--serious-bg); }
+.issue-card.normal { border-color: #ffcc00; background: var(--normal-bg); }
+.issue-card.suggestion { border-color: #5ac8fa; background: var(--suggestion-bg); }
+.issue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.issue-severity {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.issue-severity.critical { background: #ff3b30; color: white; }
+.issue-severity.serious { background: #ff9500; color: white; }
+.issue-severity.normal { background: #ffcc00; color: #1d1d1f; }
+.issue-severity.suggestion { background: #5ac8fa; color: white; }
+.issue-type {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.issue-desc {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.issue-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.issue-actions button {
+  font-size: 11px;
+  padding: 2px 6px;
+  border: none;
+  background: rgba(0,0,0,0.05);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.issue-actions button:hover { background: rgba(0,0,0,0.1); }
+.issues-summary {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.checklist-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.checklist-category {
+  margin-bottom: 12px;
+}
+.checklist-category-title {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background var(--transition);
+}
+.checklist-item:hover { background: var(--bg); }
+.checklist-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.checklist-item label {
+  font-size: 13px;
+  cursor: pointer;
+  flex: 1;
+  line-height: 1.4;
+}
+.checklist-item.checked label {
+  color: var(--text-light);
+  text-decoration: line-through;
+}
+.checklist-progress {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+}
+.modal-content {
+  position: relative;
+  background: var(--bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-sm { width: 400px; }
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { font-size: 16px; }
+.modal-body { padding: 20px; }
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.form-group {
+  margin-bottom: 14px;
+}
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color var(--transition);
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-row .form-group { flex: 1; }
+.annotation-preview {
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 8px;
+  text-align: center;
+}
+.annotation-preview canvas {
+  max-width: 100%;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+@media (max-width: 1024px) {
+  #sidebar { width: 200px; }
+  .right-panel { width: 300px; }
+}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h1>🔍 UI 走查</h1>
+        <button id="btn-new-project" class="btn-primary" title="新建项目">+ 新项目</button>
+      </div>
+      <div id="project-list" class="project-list"></div>
+    </aside>
+    <main id="main-content">
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h2>开始 UI 走查</h2>
+        <p>创建一个新项目，或从左侧选择已有项目</p>
+        <button class="btn-primary btn-lg" onclick="createProject()">+ 创建项目</button>
+      </div>
+      <div id="project-view" class="hidden">
+        <header id="top-bar">
+          <div class="top-bar-left">
+            <input id="project-name" class="project-name-input" placeholder="项目名称" />
+            <span class="project-meta" id="project-meta"></span>
+          </div>
+          <div class="top-bar-right">
+            <button class="btn-ghost" onclick="addPage()" title="添加页面">+ 添加页面</button>
+            <div class="dropdown">
+              <button class="btn-ghost" id="btn-export">📥 导出</button>
+              <div class="dropdown-menu" id="export-menu">
+                <button onclick="showReport()">📋 生成报告</button>
+                <button onclick="exportMarkdown()">📄 Markdown</button>
+                <button onclick="exportExcel()">📊 Excel</button>
+                <button onclick="exportJSON()">💾 JSON (备份)</button>
+              </div>
+            </div>
+            <button class="btn-ghost btn-danger" onclick="deleteCurrentProject()" title="删除项目">🗑️</button>
+          </div>
+        </header>
+        <div id="page-tabs" class="page-tabs">
+          <div class="tabs-scroll">
+            <div id="tabs-container" class="tabs-container"></div>
+          </div>
+        </div>
+        <div id="content-area" class="content-area">
+          <div id="canvas-panel" class="canvas-panel">
+            <div id="toolbar" class="toolbar">
+              <div class="tool-group">
+                <button class="tool-btn" data-tool="select" title="选择 (V)" onclick="setTool('select')">
+                  <span>🖱️</span><small>选择</small>
+                </button>
+                <button class="tool-btn" data-tool="rect" title="矩形标注 (R)" onclick="setTool('rect')">
+                  <span>⬜</span><small>矩形</small>
+                </button>
+                <button class="tool-btn" data-tool="circle" title="圆形标注 (C)" onclick="setTool('circle')">
+                  <span>⭕</span><small>圆形</small>
+                </button>
+                <button class="tool-btn" data-tool="arrow" title="箭头 (A)" onclick="setTool('arrow')">
+                  <span>➡️</span><small>箭头</small>
+                </button>
+                <button class="tool-btn" data-tool="freehand" title="自由绘制 (D)" onclick="setTool('freehand')">
+                  <span>✏️</span><small>画笔</small>
+                </button>
+                <button class="tool-btn" data-tool="text" title="文字标注 (T)" onclick="setTool('text')">
+                  <span>📝</span><small>文字</small>
+                </button>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <label class="tool-label">颜色</label>
+                <input type="color" id="stroke-color" value="#FF3B30" class="color-input" />
+              </div>
+              <div class="tool-group">
+                <label class="tool-label">粗细</label>
+                <select id="stroke-width" class="select-small">
+                  <option value="2">细</option>
+                  <option value="3" selected>中</option>
+                  <option value="5">粗</option>
+                </select>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <button class="tool-btn" title="撤销 (Ctrl+Z)" onclick="undoAction()">
+                  <span>↩️</span><small>撤销</small>
+                </button>
+                <button class="tool-btn" title="重做 (Ctrl+Y)" onclick="redoAction()">
+                  <span>↪️</span><small>重做</small>
+                </button>
+                <button class="tool-btn" title="清除所有标注" onclick="clearAnnotations()">
+                  <span>🧹</span><small>清除</small>
+                </button>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <button class="tool-btn" title="放大" onclick="zoomIn()">
+                  <span>🔍</span><small>放大</small>
+                </button>
+                <button class="tool-btn" title="缩小" onclick="zoomOut()">
+                  <span>🔎</span><small>缩小</small>
+                </button>
+                <button class="tool-btn" title="适合窗口" onclick="zoomFit()">
+                  <span>📐</span><small>适合</small>
+                </button>
+                <button class="tool-btn" title="100%" onclick="zoomReset()">
+                  <span>💯</span><small>1:1</small>
+                </button>
+                <span id="zoom-level" style="font-size:11px;color:#86868b;min-width:40px;text-align:center">100%</span>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <label class="tool-label">叠影</label>
+                <input type="range" id="overlay-slider" min="0" max="100" value="50" class="range-slider" />
+                <span id="overlay-value" class="range-value">50%</span>
+              </div>
+              <div class="tool-group">
+                <label class="tool-label">视图</label>
+                <select id="view-mode" class="select-small" onchange="changeViewMode(this.value)">
+                  <option value="overlay">叠影对比</option>
+                  <option value="side">并排对比</option>
+                  <option value="design">仅设计稿</option>
+                  <option value="actual">仅实际</option>
+                </select>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <button class="tool-btn" title="拖动实际截图 (M)" onclick="toggleDragImage('actual')" id="btn-drag-actual">
+                  <span>📱</span><small>拖截图</small>
+                </button>
+                <button class="tool-btn" title="拖动设计稿" onclick="toggleDragImage('design')" id="btn-drag-design">
+                  <span>📐</span><small>拖设计稿</small>
+                </button>
+                <button class="tool-btn" title="对齐复位" onclick="resetImagePositions()">
+                  <span>🎯</span><small>对齐</small>
+                </button>
+              </div>
+              <div class="tool-separator"></div>
+              <div class="tool-group">
+                <button class="tool-btn" title="自动识别矩形对齐" onclick="autoDetectRects()">
+                  <span>🔲</span><small>智能对齐</small>
+                </button>
+                <button class="tool-btn" title="清除参考线" onclick="clearGuides()">
+                  <span>📏</span><small>清除参考线</small>
+                </button>
+              </div>
+            </div>
+            <div id="canvas-container" class="canvas-container">
+              <div id="img-actions-design" class="img-actions hidden">
+                <span class="img-actions-label">📐 设计稿</span>
+                <button class="img-action-btn" onclick="replaceImage('design')" title="替换设计稿">🔄</button>
+                <button class="img-action-btn btn-danger" onclick="removeImage('design')" title="删除设计稿">🗑️</button>
+              </div>
+              <div id="img-actions-actual" class="img-actions hidden">
+                <span class="img-actions-label">📱 实际截图</span>
+                <button class="img-action-btn" onclick="smartCropActual()" title="智能识别屏幕并裁切">✂️ 智能裁切</button>
+                <button class="img-action-btn" onclick="replaceImage('actual')" title="替换截图">🔄</button>
+                <button class="img-action-btn btn-danger" onclick="removeImage('actual')" title="删除截图">🗑️</button>
+              </div>
+              <div id="canvas-wrapper" class="canvas-wrapper">
+                <canvas id="design-canvas"></canvas>
+                <canvas id="annotation-canvas"></canvas>
+              </div>
+              <div id="side-view" class="side-view hidden">
+                <div class="side-panel">
+                  <h4>📐 设计稿</h4>
+                  <canvas id="design-canvas-side"></canvas>
+                </div>
+                <div class="side-panel">
+                  <h4>📱 实际</h4>
+                  <canvas id="actual-canvas-side"></canvas>
+                </div>
+              </div>
+            </div>
+            <div id="upload-area" class="upload-area">
+              <button id="upload-toggle" class="upload-toggle" onclick="toggleUpload()" title="收起/展开上传区域">
+                <span id="upload-toggle-icon">▼</span> 上传图片
+              </button>
+              <div id="upload-zones" class="upload-zones">
+                <div class="upload-zone" id="upload-design" ondrop="handleDrop(event,'design')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                  <div class="upload-icon">📐</div>
+                  <p>拖入设计稿</p>
+                  <small>或 <label class="upload-link">点击选择<input type="file" accept="image/*" onchange="handleFileSelect(event,'design')" hidden /></label></small>
+                </div>
+                <div class="upload-zone" id="upload-actual" ondrop="handleDrop(event,'actual')" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                  <div class="upload-icon">📱</div>
+                  <p>拖入实际截图</p>
+                  <small>或 <label class="upload-link">点击选择<input type="file" accept="image/*" onchange="handleFileSelect(event,'actual')" hidden /></label></small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="right-panel" class="right-panel">
+            <div class="panel-tabs">
+              <button class="panel-tab active" data-panel="issues" onclick="switchPanel('issues')">问题列表</button>
+              <button class="panel-tab" data-panel="checklist" onclick="switchPanel('checklist')">走查清单</button>
+            </div>
+            <div id="panel-issues" class="panel-content">
+              <div class="panel-header">
+                <select id="filter-severity" class="select-small" onchange="renderIssues()">
+                  <option value="all">全部级别</option>
+                  <option value="critical">🔴 致命</option>
+                  <option value="serious">🟠 严重</option>
+                  <option value="normal">🟡 一般</option>
+                  <option value="suggestion">🔵 建议</option>
+                </select>
+                <button class="btn-sm btn-primary" onclick="addIssue()">+ 记录问题</button>
+              </div>
+              <div id="issues-list" class="issues-list"></div>
+              <div id="issues-summary" class="issues-summary"></div>
+            </div>
+            <div id="panel-checklist" class="panel-content hidden">
+              <div class="panel-header">
+                <button class="btn-sm" onclick="resetChecklist()">重置</button>
+                <span id="checklist-progress" class="checklist-progress"></span>
+              </div>
+              <div id="checklist-container" class="checklist-container"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Report Modal -->
+  <div id="report-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal('report-modal')"></div>
+    <div class="modal-content" style="max-width:920px;max-height:88vh;overflow-y:auto">
+      <div class="modal-header">
+        <h3>📋 走查报告</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-primary btn-sm" onclick="exportReportPDF()">🖨️ 导出 PDF</button>
+          <button class="btn-close" onclick="closeModal('report-modal')">×</button>
+        </div>
+      </div>
+      <div id="report-body" style="padding:20px"></div>
+    </div>
+  </div>
+
+  <div id="issue-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal('issue-modal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="issue-modal-title">记录问题</h3>
+        <button class="btn-close" onclick="closeModal('issue-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>问题描述</label>
+          <textarea id="issue-desc" rows="3" placeholder="描述发现的 UI 问题..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>严重程度</label>
+            <select id="issue-severity">
+              <option value="critical">🔴 致命 - 功能不可用/严重错位</option>
+              <option value="serious">🟠 严重 - 明显视觉问题</option>
+              <option value="normal" selected>🟡 一般 - 轻微偏差</option>
+              <option value="suggestion">🔵 建议 - 优化建议</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>问题类型</label>
+            <select id="issue-type">
+              <option value="layout">布局问题</option>
+              <option value="font">字体/文字</option>
+              <option value="color">颜色</option>
+              <option value="spacing">间距</option>
+              <option value="icon">图标</option>
+              <option value="interaction">交互状态</option>
+              <option value="responsive">响应式</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>截图标注（可选）</label>
+          <div class="annotation-preview" id="annotation-preview">
+            <canvas id="preview-canvas" width="400" height="200"></canvas>
+            <button class="btn-sm" onclick="captureAnnotation()">📸 截取当前标注</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('issue-modal')">取消</button>
+        <button class="btn-primary" onclick="saveIssue()">保存</button>
+      </div>
+    </div>
+  </div>
+  <div id="project-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal('project-modal')"></div>
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h3>新建项目</h3>
+        <button class="btn-close" onclick="closeModal('project-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>项目名称</label>
+          <input type="text" id="new-project-name" placeholder="例如：首页改版走查" autofocus />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeModal('project-modal')">取消</button>
+        <button class="btn-primary" onclick="confirmCreateProject()">创建</button>
+      </div>
+    </div>
+  </div>
+  <script>// ===== UI 走查工具 - 主逻辑 =====
+// ===== Data Store =====
+const STORAGE_KEY = 'ui-review-data';
+const DEFAULT_CHECKLIST = [
+  {
+    category: '📐 布局与间距',
+    items: [
+      '元素间距与设计稿一致',
+      '对齐方式正确（左对齐/居中/右对齐）',
+      '容器宽度/高度符合规范',
+      '留白比例合理',
+      '响应式布局在不同屏幕下正常',
+    ]
+  },
+  {
+    category: '🔤 字体与文字',
+    items: [
+      '字体家族正确',
+      '字号符合设计规范',
+      '行高/字间距合理',
+      '文字颜色与设计稿一致',
+      '文字截断/换行处理正确',
+      '多语言适配正常',
+    ]
+  },
+  {
+    category: '🎨 颜色与视觉',
+    items: [
+      '主色调/辅助色正确',
+      '背景色/渐变正确',
+      '透明度/阴影效果一致',
+      '边框样式正确',
+      '图标样式/大小一致',
+    ]
+  },
+  {
+    category: '🖱️ 交互状态',
+    items: [
+      '按钮默认/悬停/按下状态',
+      '输入框聚焦/失焦状态',
+      '禁用状态样式正确',
+      '加载状态展示正常',
+      '空状态展示合理',
+      '错误状态提示清晰',
+    ]
+  },
+  {
+    category: '📱 响应式',
+    items: [
+      '移动端布局正常',
+      '平板端布局正常',
+      '横屏/竖屏切换正常',
+      '触摸目标足够大（≥44px）',
+      '文字在小屏下可读',
+    ]
+  },
+  {
+    category: '♿ 可访问性',
+    items: [
+      '文字对比度达标（WCAG AA）',
+      '交互元素有焦点态',
+      '图片有替代文字',
+      '表单有正确标签',
+      '键盘导航可用',
+    ]
+  }
+];
+let state = {
+  projects: [],
+  currentProjectId: null,
+  currentTabId: null,
+};
+let fabricCanvas = null;
+let designImage = null;
+let actualImage = null;
+let currentTool = 'select';
+let undoStack = [];
+let redoStack = [];
+let editingIssueId = null;
+// ===== Init =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadState();
+  renderProjectList();
+  initFabricCanvas();
+  initKeyBindings();
+  initOverlaySlider();
+  if (state.projects.length > 0) {
+    const lastProject = state.projects.find(p => p.id === state.currentProjectId) || state.projects[0];
+    selectProject(lastProject.id);
+  }
+});
+// ===== State Management =====
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      state = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load state:', e);
+  }
+}
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save state:', e);
+  }
+}
+function getCurrentProject() {
+  return state.projects.find(p => p.id === state.currentProjectId);
+}
+function getCurrentPage() {
+  const project = getCurrentProject();
+  if (!project) return null;
+  return project.pages.find(p => p.id === state.currentTabId);
+}
+// ===== Project Management =====
+function createProject() {
+  document.getElementById('project-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('new-project-name').focus(), 100);
+}
+function confirmCreateProject() {
+  const nameInput = document.getElementById('new-project-name');
+  const name = nameInput.value.trim() || '未命名项目';
+  const project = {
+    id: 'proj_' + Date.now(),
+    name,
+    createdAt: new Date().toISOString(),
+    pages: []
+  };
+  state.projects.unshift(project);
+  state.currentProjectId = project.id;
+  saveState();
+  nameInput.value = '';
+  closeModal('project-modal');
+  renderProjectList();
+  selectProject(project.id);
+  // Auto-add first page
+  addPage();
+}
+function selectProject(projectId) {
+  state.currentProjectId = projectId;
+  const project = getCurrentProject();
+  if (!project) return;
+  document.getElementById('empty-state').classList.add('hidden');
+  document.getElementById('project-view').classList.remove('hidden');
+  document.getElementById('project-name').value = project.name;
+  updateProjectMeta();
+  if (project.pages.length > 0 && !project.pages.find(p => p.id === state.currentTabId)) {
+    state.currentTabId = project.pages[0].id;
+  }
+  renderTabs();
+  renderCurrentPage();
+  renderProjectList();
+  saveState();
+}
+function deleteCurrentProject() {
+  const project = getCurrentProject();
+  if (!project) return;
+  if (!confirm(`确定删除项目「${project.name}」？此操作不可撤销。`)) return;
+  state.projects = state.projects.filter(p => p.id !== project.id);
+  state.currentProjectId = state.projects.length > 0 ? state.projects[0].id : null;
+  state.currentTabId = null;
+  saveState();
+  if (state.projects.length > 0) {
+    selectProject(state.currentProjectId);
+  } else {
+    document.getElementById('empty-state').classList.remove('hidden');
+    document.getElementById('project-view').classList.add('hidden');
+  }
+  renderProjectList();
+}
+function updateProjectMeta() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const date = new Date(project.createdAt).toLocaleDateString('zh-CN');
+  const pageCount = project.pages.length;
+  document.getElementById('project-meta').textContent = `${date} · ${pageCount} 页`;
+}
+// ===== Page Management =====
+function addPage() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const page = {
+    id: 'page_' + Date.now(),
+    name: `页面 ${project.pages.length + 1}`,
+    designImage: null,
+    actualImage: null,
+    annotations: [],
+    checklist: JSON.parse(JSON.stringify(DEFAULT_CHECKLIST)),
+    issues: [],
+    viewMode: 'overlay',
+    overlayOpacity: 50,
+  };
+  project.pages.push(page);
+  state.currentTabId = page.id;
+  saveState();
+  renderTabs();
+  renderCurrentPage();
+  updateProjectMeta();
+}
+function deletePage(pageId) {
+  const project = getCurrentProject();
+  if (!project) return;
+  if (project.pages.length <= 1) {
+    alert('至少保留一个页面');
+    return;
+  }
+  project.pages = project.pages.filter(p => p.id !== pageId);
+  if (state.currentTabId === pageId) {
+    state.currentTabId = project.pages[0].id;
+  }
+  saveState();
+  renderTabs();
+  renderCurrentPage();
+  updateProjectMeta();
+}
+function switchTab(pageId) {
+  state.currentTabId = pageId;
+  saveState();
+  renderTabs();
+  renderCurrentPage();
+}
+function renameTab(pageId, newName) {
+  const page = getCurrentProject()?.pages.find(p => p.id === pageId);
+  if (page) {
+    page.name = newName;
+    saveState();
+    renderTabs();
+  }
+}
+// ===== Render =====
+function renderProjectList() {
+  const container = document.getElementById('project-list');
+  if (state.projects.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:#86868b;font-size:13px;">暂无项目</div>';
+    return;
+  }
+  container.innerHTML = state.projects.map(p => `
+    <div class="project-item ${p.id === state.currentProjectId ? 'active' : ''}" onclick="selectProject('${p.id}')">
+      <div class="project-name">${escapeHtml(p.name)}</div>
+      <div class="project-date">${new Date(p.createdAt).toLocaleDateString('zh-CN')} · ${p.pages.length} 页</div>
+    </div>
+  `).join('');
+}
+function renderTabs() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const container = document.getElementById('tabs-container');
+  container.innerHTML = project.pages.map(page => `
+    <button class="tab ${page.id === state.currentTabId ? 'active' : ''}" onclick="switchTab('${page.id}')" ondblclick="startRenameTab(this, '${page.id}')">
+      <span class="tab-name">${escapeHtml(page.name)}</span>
+      <span class="tab-close" onclick="event.stopPropagation(); deletePage('${page.id}')">×</span>
+    </button>
+  `).join('') + '<button class="tab-add" onclick="addPage()">+</button>';
+}
+function startRenameTab(el, pageId) {
+  const nameEl = el.querySelector('.tab-name');
+  const currentName = nameEl.textContent;
+  const input = document.createElement('input');
+  input.value = currentName;
+  input.style.cssText = 'width:80px;border:1px solid var(--primary);border-radius:3px;padding:2px 6px;font-size:13px;';
+  input.onblur = () => renameTab(pageId, input.value.trim() || currentName);
+  input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); };
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+}
+function renderCurrentPage() {
+  const page = getCurrentPage();
+  if (!page) return;
+  const uploadArea = document.getElementById('upload-area');
+  const uploadZones = document.getElementById('upload-zones');
+  const uploadToggle = document.getElementById('upload-toggle');
+  const canvasWrapper = document.getElementById('canvas-wrapper');
+  const sideView = document.getElementById('side-view');
+  if (!page.designImage && !page.actualImage) {
+    uploadArea.classList.remove('hidden');
+    uploadArea.style.display = '';
+    uploadZones.classList.remove('collapsed');
+    uploadToggle.style.display = 'none';
+    canvasWrapper.style.display = 'none';
+    sideView.classList.add('hidden');
+    document.getElementById('upload-design').style.display = '';
+    document.getElementById('upload-actual').style.display = '';
+    return;
+  }
+  // Show upload zone for missing image alongside canvas
+  uploadArea.classList.remove('hidden');
+  uploadArea.style.display = '';
+  uploadToggle.style.display = '';
+  document.getElementById('upload-design').style.display = page.designImage ? 'none' : '';
+  document.getElementById('upload-actual').style.display = page.actualImage ? 'none' : '';
+  // If both uploaded, hide upload area
+  if (page.designImage && page.actualImage) {
+    uploadArea.classList.add('hidden');
+  }
+  // If one image is missing, force view to show the available one
+  if (!page.designImage && page.actualImage) {
+    page.viewMode = 'actual';
+  } else if (page.designImage && !page.actualImage) {
+    page.viewMode = 'design';
+  }
+  if (page.viewMode === 'side') {
+    canvasWrapper.style.display = 'none';
+    sideView.classList.remove('hidden');
+    renderSideView(page);
+  } else {
+    canvasWrapper.style.display = 'block';
+    sideView.classList.add('hidden');
+    // Wait for layout to settle before rendering canvas
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        renderOverlayView(page);
+      });
+    });
+  }
+  renderIssues();
+  renderChecklist();
+  updateViewModeUI(page);
+  updateImageActions(page);
+}
+function renderOverlayView(page) {
+  if (!fabricCanvas) return;
+  const designSrc = page.designImage;
+  const actualSrc = page.actualImage;
+  if (!designSrc && !actualSrc) return;
+
+  const container = document.getElementById('canvas-container');
+  if (!container) return;
+
+  const cW = container.clientWidth;
+  const cH = container.clientHeight;
+  if (cW < 10 || cH < 10) return;
+
+  fabricCanvas.setWidth(cW);
+  fabricCanvas.setHeight(cH);
+  fabricCanvas.clear();
+
+  const primarySrc = designSrc || actualSrc;
+  const img = new Image();
+  img.onload = () => {
+    const padding = 40;
+    const scale = Math.min(
+      (cW - padding * 2) / img.width,
+      (cH - padding * 2) / img.height,
+      2
+    );
+    const imgW = img.width * scale;
+    const imgH = img.height * scale;
+    const offsetX = (cW - imgW) / 2;
+    const offsetY = (cH - imgH) / 2;
+
+    const bgImg = new fabric.Image(img, {
+      left: offsetX, top: offsetY,
+      scaleX: scale, scaleY: scale,
+      selectable: true, evented: true,
+      _imageType: designSrc ? 'design' : 'actual',
+      hasControls: false, hasBorders: true,
+      lockRotation: true, lockScalingX: true, lockScalingY: true,
+      borderColor: designSrc ? '#0071e3' : '#34c759',
+      cornerSize: 0,
+    });
+    fabricCanvas.add(bgImg);
+
+    if (designSrc && actualSrc) {
+      const overlayImgEl = new Image();
+      overlayImgEl.onload = () => {
+        const overlayImg = new fabric.Image(overlayImgEl, {
+          left: offsetX, top: offsetY,
+          scaleX: scale, scaleY: scale,
+          opacity: (page.overlayOpacity || 50) / 100,
+          selectable: true, evented: true,
+          _imageType: 'actual',
+          hasControls: false, hasBorders: true,
+          lockRotation: true, lockScalingX: true, lockScalingY: true,
+          borderColor: '#34c759',
+          cornerSize: 0,
+        });
+        fabricCanvas.add(overlayImg);
+        restoreAnnotations(page);
+        fabricCanvas.renderAll();
+      };
+      overlayImgEl.src = actualSrc;
+    } else {
+      restoreAnnotations(page);
+      fabricCanvas.renderAll();
+    }
+  };
+  img.onerror = () => {
+    console.error('Failed to load image');
+    fabricCanvas.renderAll();
+  };
+  img.src = primarySrc;
+}
+function renderSideView(page) {
+  const renderToCanvas = (canvasId, imgSrc) => {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    if (!imgSrc) {
+      canvas.width = 400;
+      canvas.height = 300;
+      ctx.fillStyle = '#f5f5f7';
+      ctx.fillRect(0, 0, 400, 300);
+      ctx.fillStyle = '#86868b';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('未上传图片', 200, 150);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      const container = document.getElementById('canvas-container');
+      const maxW = container ? (container.clientWidth - 40) / 2 : 400;
+      const maxH = container ? container.clientHeight - 40 : 500;
+      const scale = Math.min(maxW / img.width, maxH / img.height, 2);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = imgSrc;
+  };
+  renderToCanvas('design-canvas-side', page.designImage);
+  renderToCanvas('actual-canvas-side', page.actualImage);
+}
+function restoreAnnotations(page) {
+  if (!page.annotations || page.annotations.length === 0) return;
+  page.annotations.forEach(ann => {
+    let obj;
+    const opts = {
+      stroke: ann.color || '#FF3B30',
+      strokeWidth: ann.strokeWidth || 3,
+      fill: 'transparent',
+      selectable: true,
+    };
+    switch (ann.type) {
+      case 'rect':
+        obj = new fabric.Rect({ ...opts, ...ann.props });
+        break;
+      case 'circle':
+        obj = new fabric.Ellipse({ ...opts, ...ann.props });
+        break;
+      case 'arrow':
+        // Recreate arrow as line + triangle
+        obj = new fabric.Line(ann.props.points, {
+          ...opts,
+          ...ann.props,
+        });
+        break;
+      case 'text':
+        obj = new fabric.IText(ann.text || '标注', {
+          left: ann.props.left,
+          top: ann.props.top,
+          fontSize: ann.fontSize || 16,
+          fill: ann.color || '#FF3B30',
+          fontFamily: '-apple-system, sans-serif',
+        });
+        break;
+      case 'freehand':
+        obj = new fabric.Path(ann.props.path, {
+          ...opts,
+          ...ann.props,
+        });
+        break;
+    }
+    if (obj) {
+      obj._annotationId = ann.id;
+      fabricCanvas.add(obj);
+    }
+  });
+  fabricCanvas.renderAll();
+}
+// ===== Fabric Canvas =====
+function initFabricCanvas() {
+  const canvasEl = document.getElementById('annotation-canvas');
+  fabricCanvas = new fabric.Canvas('annotation-canvas', {
+    isDrawingMode: false,
+    selection: true,
+    preserveObjectStacking: true,
+  });
+  fabricCanvas.freeDrawingBrush.color = '#FF3B30';
+  fabricCanvas.freeDrawingBrush.width = 3;
+  // Drawing events - only active when drawing
+  fabricCanvas.on('mouse:down', handleCanvasMouseDown);
+  fabricCanvas.on('mouse:up', handleCanvasMouseUp);
+  fabricCanvas.on('object:modified', (e) => {
+    if (e.target._imageType) return; // Don't save image position as annotation
+    saveAnnotations();
+  });
+  fabricCanvas.on('path:created', (e) => {
+    e.path._annotationId = 'ann_' + Date.now();
+    saveAnnotations();
+  });
+  // Custom image dragging with mouse
+  let draggingImage = null;
+  let dragOffset = { x: 0, y: 0 };
+  fabricCanvas.on('mouse:down', function(opt) {
+    if (currentTool !== 'select') return;
+    const target = opt.target;
+    if (target && target._imageType) {
+      draggingImage = target;
+      const pointer = fabricCanvas.getPointer(opt.e);
+      dragOffset.x = pointer.x - target.left;
+      dragOffset.y = pointer.y - target.top;
+      fabricCanvas.setActiveObject(target);
+      fabricCanvas.renderAll();
+    }
+  });
+  fabricCanvas.on('mouse:move', function(opt) {
+    if (!draggingImage) return;
+    const pointer = fabricCanvas.getPointer(opt.e);
+    draggingImage.set({
+      left: pointer.x - dragOffset.x,
+      top: pointer.y - dragOffset.y,
+    });
+    draggingImage.setCoords();
+    fabricCanvas.renderAll();
+  });
+  fabricCanvas.on('mouse:up', function(opt) {
+    draggingImage = null;
+  });
+}
+let isDrawing = false;
+let drawStart = null;
+let drawObj = null;
+function handleCanvasMouseDown(opt) {
+  if (currentTool === 'select' || currentTool === 'freehand') return;
+  const pointer = fabricCanvas.getPointer(opt.e);
+  isDrawing = true;
+  drawStart = pointer;
+  const color = document.getElementById('stroke-color').value;
+  const width = parseInt(document.getElementById('stroke-width').value);
+  const opts = {
+    left: pointer.x,
+    top: pointer.y,
+    stroke: color,
+    strokeWidth: width,
+    fill: 'transparent',
+    selectable: false,
+    _annotationId: 'ann_' + Date.now(),
+  };
+  switch (currentTool) {
+    case 'rect':
+      drawObj = new fabric.Rect({ ...opts, width: 0, height: 0 });
+      break;
+    case 'circle':
+      drawObj = new fabric.Ellipse({ ...opts, rx: 0, ry: 0 });
+      break;
+    case 'arrow':
+      drawObj = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+        ...opts,
+        _isArrow: true,
+      });
+      break;
+    case 'text':
+      isDrawing = false;
+      const text = prompt('输入标注文字：');
+      if (text) {
+        const textObj = new fabric.IText(text, {
+          left: pointer.x,
+          top: pointer.y,
+          fontSize: 16,
+          fill: color,
+          fontFamily: '-apple-system, sans-serif',
+          _annotationId: 'ann_' + Date.now(),
+        });
+        fabricCanvas.add(textObj);
+        saveAnnotations();
+      }
+      return;
+  }
+  if (drawObj) {
+    fabricCanvas.add(drawObj);
+  }
+}
+function handleCanvasMouseUp(opt) {
+  if (!isDrawing || !drawObj) return;
+  isDrawing = false;
+  drawObj.set({ selectable: true });
+  // For arrows, add arrowhead
+  if (drawObj._isArrow) {
+    const x1 = drawObj.x1, y1 = drawObj.y1, x2 = drawObj.x2, y2 = drawObj.y2;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const headLen = 15;
+    const arrowHead = new fabric.Triangle({
+      left: x2,
+      top: y2,
+      width: headLen,
+      height: headLen,
+      fill: drawObj.stroke,
+      angle: (angle * 180 / Math.PI) + 90,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+    });
+    const group = new fabric.Group([drawObj, arrowHead], {
+      _annotationId: drawObj._annotationId,
+      selectable: true,
+    });
+    fabricCanvas.remove(drawObj);
+    fabricCanvas.add(group);
+  }
+  drawObj = null;
+  saveAnnotations();
+  pushUndo();
+}
+function saveAnnotations() {
+  const page = getCurrentPage();
+  if (!page) return;
+  page.annotations = fabricCanvas.getObjects()
+    .filter(obj => !obj._imageType) // Skip design/actual images
+    .map(obj => {
+    const base = {
+      id: obj._annotationId || 'ann_' + Date.now(),
+      type: obj.type === 'rect' ? 'rect' : 
+            obj.type === 'ellipse' ? 'circle' : 
+            obj.type === 'i-text' ? 'text' : 
+            obj.type === 'path' ? 'freehand' : 
+            obj.type === 'group' ? 'arrow' : 'other',
+      color: obj.stroke || obj.fill,
+      strokeWidth: obj.strokeWidth,
+    };
+    if (base.type === 'text') {
+      base.text = obj.text;
+      base.props = { left: obj.left, top: obj.top };
+      base.fontSize = obj.fontSize;
+    } else if (base.type === 'arrow') {
+      const items = obj.getObjects();
+      const line = items[0];
+      base.props = { points: [line.x1, line.y1, line.x2, line.y2] };
+    } else {
+      base.props = {
+        left: obj.left,
+        top: obj.top,
+        width: obj.width,
+        height: obj.height,
+        rx: obj.rx,
+        ry: obj.ry,
+        scaleX: obj.scaleX,
+        scaleY: obj.scaleY,
+        angle: obj.angle,
+        path: obj.path,
+      };
+    }
+    return base;
+  });
+  saveState();
+}
+// ===== Tools =====
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.tool-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tool === tool);
+  });
+  if (tool === 'freehand') {
+    fabricCanvas.isDrawingMode = true;
+    fabricCanvas.freeDrawingBrush.color = document.getElementById('stroke-color').value;
+    fabricCanvas.freeDrawingBrush.width = parseInt(document.getElementById('stroke-width').value);
+  } else {
+    fabricCanvas.isDrawingMode = false;
+  }
+  fabricCanvas.selection = tool === 'select';
+  fabricCanvas.forEachObject(obj => {
+    if (obj._imageType) {
+      // Images are always interactive
+      obj.set('selectable', true);
+      obj.set('evented', true);
+    } else if (!obj._isGuide) {
+      obj.selectable = tool === 'select';
+    }
+  });
+  fabricCanvas.defaultCursor = tool === 'select' ? 'default' : 'crosshair';
+}
+
+// ===== Zoom & Pan =====
+let canvasZoom = 1;
+function updateZoomDisplay() {
+  const el = document.getElementById('zoom-level');
+  if (el) el.textContent = Math.round(canvasZoom * 100) + '%';
+}
+function zoomFit() {
+  // Canvas already fills container, just re-render
+  const page = getCurrentPage();
+  if (page) renderOverlayView(page);
+}
+function zoomReset() {
+  const page = getCurrentPage();
+  if (page) renderOverlayView(page);
+}
+
+function clearAnnotations() {
+  if (!confirm('清除所有标注？')) return;
+  const page = getCurrentPage();
+  if (!page) return;
+  fabricCanvas.getObjects().slice().forEach(obj => {
+    if (obj !== fabricCanvas.backgroundImage) {
+      fabricCanvas.remove(obj);
+    }
+  });
+  page.annotations = [];
+  saveState();
+}
+// ===== Undo/Redo =====
+function pushUndo() {
+  const page = getCurrentPage();
+  if (!page) return;
+  undoStack.push(JSON.stringify(page.annotations));
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
+}
+function undoAction() {
+  if (undoStack.length === 0) return;
+  const page = getCurrentPage();
+  if (!page) return;
+  redoStack.push(JSON.stringify(page.annotations));
+  const prev = JSON.parse(undoStack.pop());
+  page.annotations = prev;
+  saveState();
+  renderCurrentPage();
+}
+function redoAction() {
+  if (redoStack.length === 0) return;
+  const page = getCurrentPage();
+  if (!page) return;
+  undoStack.push(JSON.stringify(page.annotations));
+  const next = JSON.parse(redoStack.pop());
+  page.annotations = next;
+  saveState();
+  renderCurrentPage();
+}
+// ===== Upload Toggle =====
+let uploadCollapsed = false;
+function toggleUpload() {
+  uploadCollapsed = !uploadCollapsed;
+  const zones = document.getElementById('upload-zones');
+  const btn = document.getElementById('upload-toggle');
+  const icon = document.getElementById('upload-toggle-icon');
+  if (zones) zones.classList.toggle('collapsed', uploadCollapsed);
+  if (btn) btn.classList.toggle('collapsed', uploadCollapsed);
+  if (icon) icon.textContent = uploadCollapsed ? '▶' : '▼';
+}
+// ===== Image Upload =====
+function handleDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('dragover');
+}
+function handleDragLeave(e) {
+  e.currentTarget.classList.remove('dragover');
+}
+function handleDrop(e, type) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    loadImage(file, type);
+  }
+}
+function handleFileSelect(e, type) {
+  const file = e.target.files[0];
+  if (file) loadImage(file, type);
+}
+function loadImage(file, type) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const page = getCurrentPage();
+    if (!page) return;
+    pushUndo();
+    if (type === 'design') {
+      page.designImage = e.target.result;
+    } else {
+      page.actualImage = e.target.result;
+    }
+    saveState();
+    renderCurrentPage();
+  };
+  reader.readAsDataURL(file);
+}
+// ===== View Mode =====
+function updateViewModeUI(page) {
+  document.getElementById('view-mode').value = page.viewMode || 'overlay';
+  const slider = document.getElementById('overlay-slider');
+  const value = document.getElementById('overlay-value');
+  slider.value = page.overlayOpacity || 50;
+  value.textContent = slider.value + '%';
+}
+function changeViewMode(mode) {
+  const page = getCurrentPage();
+  if (!page) return;
+  page.viewMode = mode;
+  saveState();
+  renderCurrentPage();
+}
+function initOverlaySlider() {
+  const slider = document.getElementById('overlay-slider');
+  const value = document.getElementById('overlay-value');
+  slider.addEventListener('input', () => {
+    value.textContent = slider.value + '%';
+    const page = getCurrentPage();
+    if (page) {
+      page.overlayOpacity = parseInt(slider.value);
+      // Update actual image opacity only
+      const objects = fabricCanvas.getObjects();
+      objects.forEach(obj => {
+        if (obj._imageType === 'actual') {
+          obj.set('opacity', page.overlayOpacity / 100);
+        }
+      });
+      fabricCanvas.renderAll();
+    }
+  });
+  slider.addEventListener('change', () => {
+    saveState();
+  });
+}
+// ===== Issues =====
+function renderIssues() {
+  const page = getCurrentPage();
+  if (!page) return;
+  const filter = document.getElementById('filter-severity').value;
+  let issues = page.issues || [];
+  if (filter !== 'all') {
+    issues = issues.filter(i => i.severity === filter);
+  }
+  const container = document.getElementById('issues-list');
+  if (issues.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--text-light);">
+        <div style="font-size:32px;margin-bottom:8px;">✨</div>
+        <p>${filter === 'all' ? '暂无问题记录' : '没有该级别问题'}</p>
+      </div>
+    `;
+  } else {
+    container.innerHTML = issues.map(issue => `
+      <div class="issue-card ${issue.severity}" onclick="highlightIssue('${issue.id}')">
+        <div class="issue-header">
+          <span class="issue-severity ${issue.severity}">${getSeverityLabel(issue.severity)}</span>
+          <span class="issue-type">${getTypeLabel(issue.type)}</span>
+        </div>
+        <div class="issue-desc">${escapeHtml(issue.description)}</div>
+        <div class="issue-actions">
+          <button onclick="event.stopPropagation(); editIssue('${issue.id}')">编辑</button>
+          <button onclick="event.stopPropagation(); deleteIssue('${issue.id}')">删除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  // Summary
+  const allIssues = page.issues || [];
+  const summary = document.getElementById('issues-summary');
+  const counts = {
+    critical: allIssues.filter(i => i.severity === 'critical').length,
+    serious: allIssues.filter(i => i.severity === 'serious').length,
+    normal: allIssues.filter(i => i.severity === 'normal').length,
+    suggestion: allIssues.filter(i => i.severity === 'suggestion').length,
+  };
+  summary.innerHTML = `
+    <span>共 ${allIssues.length} 个问题</span>
+    ${counts.critical ? `<span style="color:#ff3b30">🔴 ${counts.critical}</span>` : ''}
+    ${counts.serious ? `<span style="color:#ff9500">🟠 ${counts.serious}</span>` : ''}
+    ${counts.normal ? `<span style="color:#ffcc00">🟡 ${counts.normal}</span>` : ''}
+    ${counts.suggestion ? `<span style="color:#5ac8fa">🔵 ${counts.suggestion}</span>` : ''}
+  `;
+}
+function addIssue() {
+  editingIssueId = null;
+  document.getElementById('issue-modal-title').textContent = '记录问题';
+  document.getElementById('issue-desc').value = '';
+  document.getElementById('issue-severity').value = 'normal';
+  document.getElementById('issue-type').value = 'layout';
+  document.getElementById('issue-modal').classList.remove('hidden');
+}
+function editIssue(id) {
+  const page = getCurrentPage();
+  if (!page) return;
+  const issue = page.issues.find(i => i.id === id);
+  if (!issue) return;
+  editingIssueId = id;
+  document.getElementById('issue-modal-title').textContent = '编辑问题';
+  document.getElementById('issue-desc').value = issue.description;
+  document.getElementById('issue-severity').value = issue.severity;
+  document.getElementById('issue-type').value = issue.type;
+  document.getElementById('issue-modal').classList.remove('hidden');
+}
+function saveIssue() {
+  const page = getCurrentPage();
+  if (!page) return;
+  const desc = document.getElementById('issue-desc').value.trim();
+  if (!desc) {
+    alert('请输入问题描述');
+    return;
+  }
+  const issueData = {
+    description: desc,
+    severity: document.getElementById('issue-severity').value,
+    type: document.getElementById('issue-type').value,
+    createdAt: new Date().toISOString(),
+  };
+  if (editingIssueId) {
+    const issue = page.issues.find(i => i.id === editingIssueId);
+    if (issue) Object.assign(issue, issueData);
+  } else {
+    page.issues.push({
+      id: 'issue_' + Date.now(),
+      ...issueData,
+    });
+  }
+  saveState();
+  closeModal('issue-modal');
+  renderIssues();
+}
+function deleteIssue(id) {
+  const page = getCurrentPage();
+  if (!page) return;
+  if (!confirm('删除此问题记录？')) return;
+  page.issues = page.issues.filter(i => i.id !== id);
+  saveState();
+  renderIssues();
+}
+function highlightIssue(id) {
+  // Could scroll to annotation or flash it
+  console.log('Highlight issue:', id);
+}
+function captureAnnotation() {
+  if (!fabricCanvas) return;
+  const dataURL = fabricCanvas.toDataURL({ format: 'png', quality: 0.8 });
+  const previewCanvas = document.getElementById('preview-canvas');
+  const ctx = previewCanvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+    previewCanvas.width = Math.min(img.width, 400);
+    previewCanvas.height = img.height * (previewCanvas.width / img.width);
+    ctx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+  };
+  img.src = dataURL;
+}
+// ===== Checklist =====
+function renderChecklist() {
+  const page = getCurrentPage();
+  if (!page || !page.checklist) return;
+  const container = document.getElementById('checklist-container');
+  let total = 0, checked = 0;
+  container.innerHTML = page.checklist.map((cat, ci) => `
+    <div class="checklist-category">
+      <div class="checklist-category-title">${escapeHtml(cat.category)}</div>
+      ${cat.items.map((item, ii) => {
+        const id = `check_${ci}_${ii}`;
+        const isChecked = cat.checked && cat.checked[ii];
+        if (isChecked) checked++;
+        total++;
+        return `
+          <div class="checklist-item ${isChecked ? 'checked' : ''}">
+            <input type="checkbox" id="${id}" ${isChecked ? 'checked' : ''} 
+              onchange="toggleChecklist(${ci}, ${ii}, this.checked)" />
+            <label for="${id}">${escapeHtml(item)}</label>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `).join('');
+  const progress = document.getElementById('checklist-progress');
+  const pct = total > 0 ? Math.round(checked / total * 100) : 0;
+  progress.textContent = `${checked}/${total} (${pct}%)`;
+}
+function toggleChecklist(catIdx, itemIdx, checked) {
+  const page = getCurrentPage();
+  if (!page) return;
+  if (!page.checklist[catIdx].checked) {
+    page.checklist[catIdx].checked = {};
+  }
+  page.checklist[catIdx].checked[itemIdx] = checked;
+  saveState();
+  renderChecklist();
+}
+function resetChecklist() {
+  const page = getCurrentPage();
+  if (!page) return;
+  if (!confirm('重置走查清单？')) return;
+  page.checklist = JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
+  saveState();
+  renderChecklist();
+}
+// ===== Export =====
+function exportMarkdown() {
+  const project = getCurrentProject();
+  if (!project) return;
+  let md = `# UI 走查报告：${project.name}\n\n`;
+  md += `> 生成时间：${new Date().toLocaleString('zh-CN')}\n\n`;
+  project.pages.forEach(page => {
+    md += `## ${page.name}\n\n`;
+    // Issues
+    if (page.issues && page.issues.length > 0) {
+      md += `### 问题列表\n\n`;
+      md += `| # | 严重程度 | 类型 | 描述 |\n`;
+      md += `|---|---------|------|------|\n`;
+      page.issues.forEach((issue, i) => {
+        md += `| ${i+1} | ${getSeverityLabel(issue.severity)} | ${getTypeLabel(issue.type)} | ${issue.description} |\n`;
+      });
+      md += '\n';
+    } else {
+      md += `### ✅ 未发现问题\n\n`;
+    }
+    // Checklist
+    if (page.checklist) {
+      md += `### 走查清单\n\n`;
+      let total = 0, checked = 0;
+      page.checklist.forEach(cat => {
+        md += `**${cat.category}**\n\n`;
+        cat.items.forEach((item, i) => {
+          const done = cat.checked && cat.checked[i];
+          if (done) checked++;
+          total++;
+          md += `- [${done ? 'x' : ' '}] ${item}\n`;
+        });
+        md += '\n';
+      });
+      md += `完成度：${checked}/${total} (${Math.round(checked/total*100)}%)\n\n`;
+    }
+    md += '---\n\n';
+  });
+  downloadFile(`${project.name}_走查报告.md`, md, 'text/markdown');
+}
+function exportExcel() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const wb = XLSX.utils.book_new();
+  project.pages.forEach(page => {
+    // Issues sheet
+    const issueData = [
+      ['#', '严重程度', '类型', '描述', '创建时间']
+    ];
+    (page.issues || []).forEach((issue, i) => {
+      issueData.push([
+        i + 1,
+        getSeverityLabel(issue.severity),
+        getTypeLabel(issue.type),
+        issue.description,
+        new Date(issue.createdAt).toLocaleString('zh-CN')
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(issueData);
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 5 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 50 },
+      { wch: 20 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, page.name.substring(0, 31));
+  });
+  XLSX.writeFile(wb, `${project.name}_走查报告.xlsx`);
+}
+function exportJSON() {
+  const project = getCurrentProject();
+  if (!project) return;
+  const json = JSON.stringify(project, null, 2);
+  downloadFile(`${project.name}_备份.json`, json, 'application/json');
+}
+
+// ===== Report Generation =====
+function showReport() {
+  const project = getCurrentProject();
+  if (!project) return;
+  closeDropdown();
+
+  // Calculate stats
+  let totalIssues = 0, critical = 0, serious = 0, normal = 0, fixed = 0;
+  const allIssues = [];
+  project.pages.forEach(page => {
+    (page.issues || []).forEach(issue => {
+      totalIssues++;
+      if (issue.severity === 'critical') critical++;
+      else if (issue.severity === 'serious') serious++;
+      else if (issue.severity === 'normal') normal++;
+      else normal++;
+      if (issue.status === 'fixed') fixed++;
+      allIssues.push({ ...issue, pageName: page.name });
+    });
+  });
+  const fixRate = totalIssues ? Math.round(fixed / totalIssues * 100) : 0;
+  const createdDate = new Date(project.createdAt).toLocaleDateString('zh-CN');
+
+  const sevLabel = { critical: '致命', serious: '严重', normal: '一般', suggestion: '建议' };
+  const sevBg = { critical: '#fff2f1', serious: '#fff8f0', normal: '#fffbf0', suggestion: '#f0f8ff' };
+  const sevColor = { critical: '#ff3b30', serious: '#ff9500', normal: '#ffcc00', suggestion: '#5ac8fa' };
+
+  const html = `
+  <div style="font-family:-apple-system,sans-serif;color:#1d1d1f">
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #0071e3">
+      <h1 style="font-size:22px;color:#1d1d1f">${escapeHtml(project.name)} 走查报告</h1>
+      <div style="font-size:13px;color:#86868b;margin-top:6px">生成时间：${new Date().toLocaleString('zh-CN')}　|　页面数：${project.pages.length}</div>
+    </div>
+
+    <h3 style="font-size:14px;color:#0071e3;border-left:4px solid #ff3b30;padding-left:10px;margin:18px 0 10px">走查流程</h3>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap">
+      ${['上传设计稿 & 实际截图','叠影/并排对比 & 标注','记录问题 & 生成清单','导出报告 & 跟踪修复'].map((s,i) => `
+        <div style="display:flex;align-items:center;gap:5px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:8px;padding:8px 12px;font-size:11px">
+          <span style="width:20px;height:20px;border-radius:50%;background:#0071e3;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${i+1}</span>${s}
+        </div>
+        ${i<3?'<span style="color:#ccc">→</span>':''}
+      `).join('')}
+    </div>
+
+    <h3 style="font-size:14px;color:#0071e3;border-left:4px solid #ff3b30;padding-left:10px;margin:18px 0 10px">问题概览</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:#fff2f1;border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#ff3b30">${critical + serious}</div><div style="font-size:10px;color:#86868b">严重问题</div></div>
+      <div style="background:#fffbf0;border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#ff9500">${normal}</div><div style="font-size:10px;color:#86868b">一般问题</div></div>
+      <div style="background:#f0f8ff;border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#5ac8fa">${totalIssues - critical - serious - normal}</div><div style="font-size:10px;color:#86868b">建议</div></div>
+      <div style="background:#f0fff4;border-radius:8px;padding:14px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:#34c759">${fixRate}%</div><div style="font-size:10px;color:#86868b">修复率</div></div>
+    </div>
+
+    <h3 style="font-size:14px;color:#0071e3;border-left:4px solid #ff3b30;padding-left:10px;margin:18px 0 10px">问题明细</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:18px">
+      <tr style="background:#0071e3;color:#fff">
+        <th style="padding:8px;text-align:left">编号</th>
+        <th style="padding:8px;text-align:left">页面</th>
+        <th style="padding:8px;text-align:left">严重度</th>
+        <th style="padding:8px;text-align:left">类型</th>
+        <th style="padding:8px;text-align:left">问题描述</th>
+      </tr>
+      ${allIssues.map((is, i) => `
+        <tr style="border-bottom:1px solid #e5e5ea">
+          <td style="padding:8px;font-weight:600;color:#0071e3">${i+1}</td>
+          <td style="padding:8px">${escapeHtml(is.pageName)}</td>
+          <td style="padding:8px"><span style="background:${sevBg[is.severity]||'#f5f5f7'};color:${sevColor[is.severity]||'#86868b'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">${sevLabel[is.severity]||is.severity}</span></td>
+          <td style="padding:8px">${getTypeLabel(is.type)}</td>
+          <td style="padding:8px">${escapeHtml(is.description)}</td>
+        </tr>
+      `).join('')}
+    </table>
+
+    <h3 style="font-size:14px;color:#0071e3;border-left:4px solid #ff3b30;padding-left:10px;margin:18px 0 10px">各页面统计</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <tr style="background:#0071e3;color:#fff">
+        <th style="padding:8px;text-align:left">页面</th>
+        <th style="padding:8px;text-align:center">总数</th>
+        <th style="padding:8px;text-align:center">严重</th>
+        <th style="padding:8px;text-align:center">一般</th>
+        <th style="padding:8px;text-align:center">建议</th>
+      </tr>
+      ${project.pages.map(page => {
+        let pTotal = (page.issues || []).length;
+        let pCrit = 0, pSer = 0, pNorm = 0;
+        (page.issues || []).forEach(is => {
+          if (is.severity === 'critical' || is.severity === 'serious') pCrit++;
+          else if (is.severity === 'normal') pNorm++;
+          else pSer++;
+        });
+        return `<tr style="border-bottom:1px solid #e5e5ea">
+          <td style="padding:8px;font-weight:500">${escapeHtml(page.name)}</td>
+          <td style="padding:8px;text-align:center">${pTotal}</td>
+          <td style="padding:8px;text-align:center;color:#ff3b30">${pCrit}</td>
+          <td style="padding:8px;text-align:center;color:#ff9500">${pNorm}</td>
+          <td style="padding:8px;text-align:center;color:#5ac8fa">${pSer}</td>
+        </tr>`;
+      }).join('')}
+    </table>
+  </div>`;
+
+  document.getElementById('report-body').innerHTML = html;
+  document.getElementById('report-modal').classList.remove('hidden');
+}
+
+function exportReportPDF() {
+  const body = document.getElementById('report-body');
+  const win = window.open('', '', 'width=900,height=700');
+  win.document.write('<html><head><title>走查报告</title><style>body{margin:40px;font-family:-apple-system,sans-serif}table{page-break-inside:auto}tr{page-break-inside:avoid}</style></head><body>' + body.innerHTML + '</body></html>');
+  win.document.close();
+  setTimeout(() => win.print(), 500);
+}
+
+function closeDropdown() {
+  const menu = document.getElementById('export-menu');
+  if (menu) menu.style.display = 'none';
+}
+// ===== Helpers =====
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function getSeverityLabel(severity) {
+  const map = { critical: '致命', serious: '严重', normal: '一般', suggestion: '建议' };
+  return map[severity] || severity;
+}
+function getTypeLabel(type) {
+  const map = {
+    layout: '布局', font: '字体', color: '颜色',
+    spacing: '间距', icon: '图标', interaction: '交互',
+    responsive: '响应式', other: '其他'
+  };
+  return map[type] || type;
+}
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+function switchPanel(panel) {
+  document.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.panel === panel);
+  });
+  document.getElementById('panel-issues').classList.toggle('hidden', panel !== 'issues');
+  document.getElementById('panel-checklist').classList.toggle('hidden', panel !== 'checklist');
+}
+// ===== Keyboard Shortcuts =====
+function initKeyBindings() {
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger shortcuts when typing in inputs
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z') { e.preventDefault(); undoAction(); }
+      if (e.key === 'y') { e.preventDefault(); redoAction(); }
+    }
+    if (!e.ctrlKey && !e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'v': setTool('select'); break;
+        case 'r': setTool('rect'); break;
+        case 'c': setTool('circle'); break;
+        case 'a': setTool('arrow'); break;
+        case 'd': setTool('freehand'); break;
+        case 't': setTool('text'); break;
+        case 'm': toggleDragImage(dragTarget === 'actual' ? 'design' : 'actual'); break;
+        case 'g': clearGuides(); break;
+        case '=': case '+': zoomIn(); break;
+        case '-': zoomOut(); break;
+        case '0': zoomFit(); break;
+      }
+    }
+    // Delete selected object
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const active = fabricCanvas.getActiveObject();
+      if (active && !active.isEditing && !active._imageType) {
+        fabricCanvas.remove(active);
+        saveAnnotations();
+      }
+    }
+    // Arrow keys to move the draggable image
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      if (!fabricCanvas) return;
+      const step = e.shiftKey ? 10 : 1; // Shift for 10px jump
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+      // Move the draggable image
+      fabricCanvas.getObjects().forEach(obj => {
+        if (obj._imageType === dragTarget) {
+          obj.set({ left: obj.left + dx, top: obj.top + dy });
+        }
+      });
+      fabricCanvas.renderAll();
+    }
+  });
+  // Project name change
+  document.getElementById('project-name').addEventListener('change', (e) => {
+    const project = getCurrentProject();
+    if (project) {
+      project.name = e.target.value.trim() || '未命名项目';
+      saveState();
+      renderProjectList();
+    }
+  });
+}
+// ===== Image Management =====
+function removeImage(type) {
+  const page = getCurrentPage();
+  if (!page) return;
+  if (!confirm(type === 'design' ? '删除设计稿？' : '删除实际截图？')) return;
+  pushUndo();
+  if (type === 'design') page.designImage = null;
+  else page.actualImage = null;
+  saveState();
+  renderCurrentPage();
+}
+function replaceImage(type) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) loadImage(file, type);
+  };
+  input.click();
+}
+// ===== Smart Screen Detection & Perspective Correction =====
+function smartCropActual() {
+  const page = getCurrentPage();
+  if (!page || !page.actualImage) {
+    alert('请先上传实际截图');
+    return;
+  }
+  const btn = event.target;
+  const origText = btn.textContent;
+  btn.textContent = '⏳ AI识别中...';
+  btn.disabled = true;
+  // Get design dimensions
+  let targetW = 0, targetH = 0;
+  if (page.designImage) {
+    const dimImg = new Image();
+    dimImg.onload = () => {
+      targetW = dimImg.naturalWidth;
+      targetH = dimImg.naturalHeight;
+      doSmartCrop(page, btn, origText, targetW, targetH);
+    };
+    dimImg.onerror = () => doSmartCrop(page, btn, origText, 0, 0);
+    dimImg.src = page.designImage;
+  } else {
+    doSmartCrop(page, btn, origText, 0, 0);
+  }
+}
+function doSmartCrop(page, btn, origText, targetW, targetH) {
+  // Extract base64 from data URL
+  const base64 = page.actualImage.split(',')[1];
+  // Call local AI screen detection API
+  const apiUrl = window.location.origin + '/api/detect-screen';
+  fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: base64 })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      alert('识别失败: ' + data.error);
+      return;
+    }
+    const corners = data.corners;
+    if (!corners || !corners.topLeft) {
+      alert('未能识别到屏幕区域');
+      return;
+    }
+    const cornerArr = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft];
+    pushUndo();
+    perspectiveTransform(page.actualImage, cornerArr, targetW, targetH).then(result => {
+      page.actualImage = result;
+      saveState();
+      renderCurrentPage();
+    });
+  })
+  .catch(e => {
+    // Fallback: try local edge detection
+    console.warn('AI detection failed, trying local:', e);
+    detectAndCropScreen(page.actualImage, targetW, targetH).then(result => {
+      if (result) {
+        pushUndo();
+        page.actualImage = result;
+        saveState();
+        renderCurrentPage();
+      } else {
+        alert('识别失败，请确保检测服务已启动，或照片中有明显的屏幕');
+      }
+    });
+  })
+  .finally(() => {
+    btn.textContent = origText;
+    btn.disabled = false;
+  });
+}
+function detectAndCropScreen(imageDataUrl, targetW, targetH) {
+  const img = new Image();
+  img.src = imageDataUrl;
+  // Process synchronously using a temporary canvas
+  const procCanvas = document.createElement('canvas');
+  const ctx = procCanvas.getContext('2d');
+  // Scale down for processing (max 1200px)
+  const maxDim = 1200;
+  const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+  procCanvas.width = img.width * scale;
+  procCanvas.height = img.height * scale;
+  ctx.drawImage(img, 0, 0, procCanvas.width, procCanvas.height);
+  const w = procCanvas.width;
+  const h = procCanvas.height;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  // Step 1: Grayscale
+  const gray = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const idx = i * 4;
+    gray[i] = Math.round(0.299 * data[idx] + 0.587 * data[idx+1] + 0.114 * data[idx+2]);
+  }
+  // Step 2: Gaussian blur (3x3)
+  const blurred = new Uint8Array(w * h);
+  const kernel = [1,2,1,2,4,2,1,2,1];
+  const kSum = 16;
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      let sum = 0;
+      let ki = 0;
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          sum += gray[(y+ky)*w+(x+kx)] * kernel[ki++];
+        }
+      }
+      blurred[y*w+x] = sum / kSum;
+    }
+  }
+  // Step 3: Canny-like edge detection (Sobel + threshold)
+  const edges = new Uint8Array(w * h);
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      const gx = -blurred[(y-1)*w+(x-1)] + blurred[(y-1)*w+(x+1)]
+                -2*blurred[y*w+(x-1)] + 2*blurred[y*w+(x+1)]
+                -blurred[(y+1)*w+(x-1)] + blurred[(y+1)*w+(x+1)];
+      const gy = -blurred[(y-1)*w+(x-1)] - 2*blurred[(y-1)*w+x] - blurred[(y-1)*w+(x+1)]
+                +blurred[(y+1)*w+(x-1)] + 2*blurred[(y+1)*w+x] + blurred[(y+1)*w+(x+1)];
+      const mag = Math.sqrt(gx*gx + gy*gy);
+      edges[y*w+x] = mag > 40 ? 255 : 0;
+    }
+  }
+  // Step 4: Morphological dilation to connect edges
+  const dilated = new Uint8Array(w * h);
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      let maxVal = 0;
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          maxVal = Math.max(maxVal, edges[(y+ky)*w+(x+kx)]);
+        }
+      }
+      dilated[y*w+x] = maxVal;
+    }
+  }
+  // Step 5: Find contours by scanning for connected edge regions
+  // Find the largest quadrilateral
+  const quads = findQuadrilaterals(dilated, w, h);
+  if (quads.length === 0) return null;
+  // Pick the largest quad
+  const best = quads.sort((a,b) => b.area - a.area)[0];
+  // Scale corners back to original image size
+  const corners = best.corners.map(c => ({ x: c.x / scale, y: c.y / scale }));
+  // Step 6: Perspective transform (output at design dimensions)
+  const cropResult = perspectiveTransform(imageDataUrl, corners, targetW, targetH);
+  return cropResult;
+}
+function findQuadrilaterals(edges, w, h) {
+  // Sample edge points along horizontal and vertical scans
+  const hLines = [];
+  const vLines = [];
+  // Find strong horizontal line segments
+  for (let y = 0; y < h; y += 2) {
+    let startX = -1;
+    let count = 0;
+    for (let x = 0; x < w; x++) {
+      if (edges[y*w+x] > 0) {
+        if (startX === -1) startX = x;
+        count++;
+      } else {
+        if (count > w * 0.1) {
+          hLines.push({ y, x1: startX, x2: startX + count, cx: startX + count/2 });
+        }
+        startX = -1;
+        count = 0;
+      }
+    }
+    if (count > w * 0.1) {
+      hLines.push({ y, x1: startX, x2: startX + count, cx: startX + count/2 });
+    }
+  }
+  // Find strong vertical line segments
+  for (let x = 0; x < w; x += 2) {
+    let startY = -1;
+    let count = 0;
+    for (let y = 0; y < h; y++) {
+      if (edges[y*w+x] > 0) {
+        if (startY === -1) startY = y;
+        count++;
+      } else {
+        if (count > h * 0.1) {
+          vLines.push({ x, y1: startY, y2: startY + count, cy: startY + count/2 });
+        }
+        startY = -1;
+        count = 0;
+      }
+    }
+    if (count > h * 0.1) {
+      vLines.push({ x, y1: startY, y2: startY + count, cy: startY + count/2 });
+    }
+  }
+  // Find intersections of h-lines and v-lines to form quadrilaterals
+  const quads = [];
+  const minDim = Math.min(w, h) * 0.15;
+  // Cluster nearby lines
+  const clusteredH = clusterLines(hLines, 'y', h * 0.02);
+  const clusteredV = clusterLines(vLines, 'x', w * 0.02);
+  // Try combinations of 2 horizontal + 2 vertical lines
+  for (let i = 0; i < clusteredH.length; i++) {
+    for (let j = i+1; j < clusteredH.length; j++) {
+      const y1 = clusteredH[i].y;
+      const y2 = clusteredH[j].y;
+      if (Math.abs(y2 - y1) < minDim) continue;
+      for (let k = 0; k < clusteredV.length; k++) {
+        for (let l = k+1; l < clusteredV.length; l++) {
+          const x1 = clusteredV[k].x;
+          const x2 = clusteredV[l].x;
+          if (Math.abs(x2 - x1) < minDim) continue;
+          const qw = Math.abs(x2 - x1);
+          const qh = Math.abs(y2 - y1);
+          const area = qw * qh;
+          // Must be at least 10% of image
+          if (area < w * h * 0.05) continue;
+          // Must not be almost entire image
+          if (area > w * h * 0.98) continue;
+          // Aspect ratio check (screens are usually between 0.3 and 2.0)
+          const aspect = qw / qh;
+          if (aspect < 0.2 || aspect > 3.0) continue;
+          quads.push({
+            corners: [
+              { x: Math.min(x1,x2), y: Math.min(y1,y2) },
+              { x: Math.max(x1,x2), y: Math.min(y1,y2) },
+              { x: Math.max(x1,x2), y: Math.max(y1,y2) },
+              { x: Math.min(x1,x2), y: Math.max(y1,y2) },
+            ],
+            area
+          });
+        }
+      }
+    }
+  }
+  return quads;
+}
+function clusterLines(lines, prop, threshold) {
+  if (lines.length === 0) return [];
+  const sorted = [...lines].sort((a,b) => a[prop] - b[prop]);
+  const clusters = [{ ...sorted[0] }];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = clusters[clusters.length - 1];
+    if (sorted[i][prop] - last[prop] < threshold) {
+      // Merge: average the position
+      last[prop] = (last[prop] + sorted[i][prop]) / 2;
+    } else {
+      clusters.push({ ...sorted[i] });
+    }
+  }
+  return clusters;
+}
+function perspectiveTransform(imageDataUrl, corners, targetW, targetH) {
+  // corners: [topLeft, topRight, bottomRight, bottomLeft]
+  const tl = corners[0], tr = corners[1], br = corners[2], bl = corners[3];
+  // Use target dimensions if provided, otherwise calculate from corners
+  let finalW, finalH;
+  if (targetW > 0 && targetH > 0) {
+    finalW = targetW;
+    finalH = targetH;
+  } else {
+    const widthTop = Math.sqrt((tr.x-tl.x)**2 + (tr.y-tl.y)**2);
+    const widthBottom = Math.sqrt((br.x-bl.x)**2 + (br.y-bl.y)**2);
+    const heightLeft = Math.sqrt((bl.x-tl.x)**2 + (bl.y-tl.y)**2);
+    const heightRight = Math.sqrt((br.x-tr.x)**2 + (br.y-tr.y)**2);
+    finalW = Math.round(Math.max(widthTop, widthBottom));
+    finalH = Math.round(Math.max(heightLeft, heightRight));
+  }
+  const srcCanvas = document.createElement('canvas');
+  const srcCtx = srcCanvas.getContext('2d');
+  const img = new Image();
+  return new Promise((resolve) => {
+    img.onload = () => {
+      srcCanvas.width = img.width;
+      srcCanvas.height = img.height;
+      srcCtx.drawImage(img, 0, 0);
+      const srcData = srcCtx.getImageData(0, 0, img.width, img.height);
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = finalW;
+      outCanvas.height = finalH;
+      const outCtx = outCanvas.getContext('2d');
+      const outData = outCtx.createImageData(finalW, finalH);
+      // Bilinear interpolation perspective transform
+      for (let y = 0; y < finalH; y++) {
+        for (let x = 0; x < finalW; x++) {
+          // Map output pixel to source using bilinear interpolation of corners
+          const u = x / finalW;
+          const v = y / finalH;
+          // Bilinear interpolation of corner positions
+          const srcX = (1-u)*(1-v)*tl.x + u*(1-v)*tr.x + u*v*br.x + (1-u)*v*bl.x;
+          const srcY = (1-u)*(1-v)*tl.y + u*(1-v)*tr.y + u*v*br.y + (1-u)*v*bl.y;
+          // Bilinear sampling
+          const sx = Math.floor(srcX);
+          const sy = Math.floor(srcY);
+          const fx = srcX - sx;
+          const fy = srcY - sy;
+          if (sx >= 0 && sx < img.width-1 && sy >= 0 && sy < img.height-1) {
+            const idx00 = (sy * img.width + sx) * 4;
+            const idx10 = (sy * img.width + sx + 1) * 4;
+            const idx01 = ((sy+1) * img.width + sx) * 4;
+            const idx11 = ((sy+1) * img.width + sx + 1) * 4;
+            const outIdx = (y * finalW + x) * 4;
+            for (let c = 0; c < 4; c++) {
+              outData.data[outIdx + c] = Math.round(
+                (1-fx)*(1-fy)*srcData.data[idx00+c] +
+                fx*(1-fy)*srcData.data[idx10+c] +
+                (1-fx)*fy*srcData.data[idx01+c] +
+                fx*fy*srcData.data[idx11+c]
+              );
+            }
+          }
+        }
+      }
+      outCtx.putImageData(outData, 0, 0);
+      resolve(outCanvas.toDataURL('image/png'));
+    };
+    img.src = imageDataUrl;
+  });
+}
+function updateImageActions(page) {
+  const designActions = document.getElementById('img-actions-design');
+  const actualActions = document.getElementById('img-actions-actual');
+  if (!designActions || !actualActions) return;
+  if (page.designImage) {
+    designActions.classList.remove('hidden');
+  } else {
+    designActions.classList.add('hidden');
+  }
+  if (page.actualImage) {
+    actualActions.classList.remove('hidden');
+  } else {
+    actualActions.classList.add('hidden');
+  }
+}
+// ===== Auto Detect Rectangles =====
+function autoDetectRects() {
+  const page = getCurrentPage();
+  if (!page || !page.designImage) {
+    alert('请先上传设计稿');
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    // Create hidden canvas for image processing
+    const procCanvas = document.createElement('canvas');
+    const procCtx = procCanvas.getContext('2d');
+    const scale = Math.min(800 / img.width, 600 / img.height, 1);
+    procCanvas.width = img.width * scale;
+    procCanvas.height = img.height * scale;
+    procCtx.drawImage(img, 0, 0, procCanvas.width, procCanvas.height);
+    const imageData = procCtx.getImageData(0, 0, procCanvas.width, procCanvas.height);
+    const rects = detectRectangles(imageData, procCanvas.width, procCanvas.height);
+    // Draw detected rects as guides on the fabric canvas
+    clearGuides();
+    const guideColor = '#0071e3';
+    const guideWidth = 1;
+    rects.forEach((rect, i) => {
+      // Scale back to original image coordinates
+      const x = rect.x / scale;
+      const y = rect.y / scale;
+      const w = rect.w / scale;
+      const h = rect.h / scale;
+      // Draw dashed rectangle guide
+      const guide = new fabric.Rect({
+        left: x,
+        top: y,
+        width: w,
+        height: h,
+        fill: 'transparent',
+        stroke: guideColor,
+        strokeWidth: guideWidth,
+        strokeDashArray: [6, 3],
+        selectable: false,
+        evented: false,
+        _isGuide: true,
+        opacity: 0.7,
+      });
+      fabricCanvas.add(guide);
+      // Add dimension label
+      const label = new fabric.IText(`${Math.round(w)}×${Math.round(h)}`, {
+        left: x,
+        top: y - 18,
+        fontSize: 11,
+        fill: guideColor,
+        fontFamily: '-apple-system, sans-serif',
+        selectable: false,
+        evented: false,
+        _isGuide: true,
+        opacity: 0.8,
+      });
+      fabricCanvas.add(label);
+    });
+    fabricCanvas.renderAll();
+    alert(`识别到 ${rects.length} 个矩形区域，已添加蓝色参考线`);
+  };
+  img.src = page.designImage;
+}
+function detectRectangles(imageData, width, height) {
+  const data = imageData.data;
+  const gray = new Uint8Array(width * height);
+  // Convert to grayscale
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    gray[i] = Math.round(0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]);
+  }
+  // Sobel edge detection
+  const edges = new Uint8Array(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = y * width + x;
+      // Sobel X
+      const gx = -gray[(y-1)*width+(x-1)] + gray[(y-1)*width+(x+1)]
+                -2*gray[y*width+(x-1)] + 2*gray[y*width+(x+1)]
+                -gray[(y+1)*width+(x-1)] + gray[(y+1)*width+(x+1)];
+      // Sobel Y
+      const gy = -gray[(y-1)*width+(x-1)] - 2*gray[(y-1)*width+x] - gray[(y-1)*width+(x+1)]
+                +gray[(y+1)*width+(x-1)] + 2*gray[(y+1)*width+x] + gray[(y+1)*width+(x+1)];
+      edges[idx] = Math.min(255, Math.sqrt(gx*gx + gy*gy));
+    }
+  }
+  // Threshold edges
+  const threshold = 50;
+  const edgeMap = new Uint8Array(width * height);
+  for (let i = 0; i < edgeMap.length; i++) {
+    edgeMap[i] = edges[i] > threshold ? 1 : 0;
+  }
+  // Find horizontal and vertical line segments
+  const hLines = findLines(edgeMap, width, height, 'horizontal');
+  const vLines = findLines(edgeMap, width, height, 'vertical');
+  // Find rectangles from line intersections
+  const rects = [];
+  const minSize = Math.min(width, height) * 0.05;
+  for (let i = 0; i < hLines.length; i++) {
+    for (let j = i + 1; j < hLines.length; j++) {
+      const h1 = hLines[i], h2 = hLines[j];
+      if (Math.abs(h1.y - h2.y) < minSize) continue;
+      for (let k = 0; k < vLines.length; k++) {
+        for (let l = k + 1; l < vLines.length; l++) {
+          const v1 = vLines[k], v2 = vLines[l];
+          if (Math.abs(v1.x - v2.x) < minSize) continue;
+          // Check if these 4 lines form a rectangle
+          const x1 = Math.min(v1.x, v2.x);
+          const x2 = Math.max(v1.x, v2.x);
+          const y1 = Math.min(h1.y, h2.y);
+          const y2 = Math.max(h1.y, h2.y);
+          const w = x2 - x1;
+          const h = y2 - y1;
+          if (w > minSize && h > minSize && w < width * 0.95 && h < height * 0.95) {
+            // Check aspect ratio - filter out too thin/thick
+            const aspect = w / h;
+            if (aspect > 0.1 && aspect < 10) {
+              rects.push({ x: x1, y: y1, w, h, area: w * h });
+            }
+          }
+        }
+      }
+    }
+  }
+  // Deduplicate overlapping rectangles
+  const filtered = [];
+  rects.sort((a, b) => b.area - a.area);
+  for (const rect of rects) {
+    let isDup = false;
+    for (const existing of filtered) {
+      const overlapX = Math.max(0, Math.min(rect.x + rect.w, existing.x + existing.w) - Math.max(rect.x, existing.x));
+      const overlapY = Math.max(0, Math.min(rect.y + rect.h, existing.y + existing.h) - Math.max(rect.y, existing.y));
+      const overlapArea = overlapX * overlapY;
+      if (overlapArea > rect.area * 0.6 || overlapArea > existing.area * 0.6) {
+        isDup = true;
+        break;
+      }
+    }
+    if (!isDup) filtered.push(rect);
+  }
+  return filtered.slice(0, 30); // Limit to 30 rectangles
+}
+function findLines(edgeMap, width, height, direction) {
+  const lines = [];
+  const minLength = Math.min(width, height) * 0.08;
+  if (direction === 'horizontal') {
+    for (let y = 0; y < height; y += 3) {
+      let startX = -1;
+      let count = 0;
+      for (let x = 0; x < width; x++) {
+        if (edgeMap[y * width + x]) {
+          if (startX === -1) startX = x;
+          count++;
+        } else {
+          if (count >= minLength) {
+            lines.push({ y, x1: startX, x2: startX + count, len: count });
+          }
+          startX = -1;
+          count = 0;
+        }
+      }
+      if (count >= minLength) {
+        lines.push({ y, x1: startX, x2: startX + count, len: count });
+      }
+    }
+  } else {
+    for (let x = 0; x < width; x += 3) {
+      let startY = -1;
+      let count = 0;
+      for (let y = 0; y < height; y++) {
+        if (edgeMap[y * width + x]) {
+          if (startY === -1) startY = y;
+          count++;
+        } else {
+          if (count >= minLength) {
+            lines.push({ x, y1: startY, y2: startY + count, len: count });
+          }
+          startY = -1;
+          count = 0;
+        }
+      }
+      if (count >= minLength) {
+        lines.push({ x, y1: startY, y2: startY + count, len: count });
+      }
+    }
+  }
+  return lines;
+}
+function clearGuides() {
+  if (!fabricCanvas) return;
+  fabricCanvas.getObjects().slice().forEach(obj => {
+    if (obj._isGuide) {
+      fabricCanvas.remove(obj);
+    }
+  });
+  fabricCanvas.renderAll();
+}
+// ===== Image Drag Control =====
+let dragTarget = 'actual'; // Which image is draggable
+function toggleDragImage(type) {
+  dragTarget = type;
+  // Update button states
+  const btnActual = document.getElementById('btn-drag-actual');
+  const btnDesign = document.getElementById('btn-drag-design');
+  if (btnActual) btnActual.classList.toggle('active', type === 'actual');
+  if (btnDesign) btnDesign.classList.toggle('active', type === 'design');
+  if (!fabricCanvas) return;
+  fabricCanvas.discardActiveObject();
+  fabricCanvas.getObjects().forEach(obj => {
+    if (obj._imageType === 'design') {
+      const enable = type === 'design';
+      obj.set({
+        selectable: enable,
+        evented: enable,
+        hoverCursor: enable ? 'move' : 'default',
+      });
+    } else if (obj._imageType === 'actual') {
+      const enable = type === 'actual';
+      obj.set({
+        selectable: enable,
+        evented: enable,
+        hoverCursor: enable ? 'move' : 'default',
+      });
+    }
+  });
+  fabricCanvas.renderAll();
+}
+function resetImagePositions() {
+  if (!fabricCanvas) return;
+  fabricCanvas.getObjects().forEach(obj => {
+    if (obj._imageType) {
+      obj.set({ left: 0, top: 0 });
+    }
+  });
+  fabricCanvas.renderAll();
+}
+// Initialize drag button state
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('btn-drag-actual');
+  if (btn) btn.classList.add('active');
+});
+</script>
+</body>
+</html>
